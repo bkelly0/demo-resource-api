@@ -1,0 +1,82 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: Build image
+    args:
+      - build
+      - -f
+      - Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_IMAGE_NAME}:$SHORT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: Push image
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_IMAGE_NAME}:$SHORT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: Deploy to Cloud Run
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_IMAGE_NAME}:$SHORT_SHA
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --ingress
+      - internal-and-cloud-load-balancing
+      - --no-allow-unauthenticated
+      - --service-account
+      - ${_SERVICE_ACCOUNT}
+      - --network
+      - ${_VPC_NETWORK}
+      - --subnet
+      - ${_VPC_SUBNET}
+      - --vpc-egress
+      - ${_VPC_EGRESS}
+      - --min-instances
+      - "0"
+      - --max-instances
+      - "1"
+      - --port
+      - "8080"
+      - --set-env-vars
+      - "SPRING_PROFILES_ACTIVE=${_PROFILES},SPRING_CLOUD_CONFIG_PROFILE=${_PROFILES},ISSUER_URI=${_ISSUER_URI},CONFIG_SERVER=${_CONFIG_SERVER}"
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: Grant gateway invoker on resource service
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - add-iam-policy-binding
+      - ${_SERVICE_NAME}
+      - --region
+      - ${_REGION}
+      - --member
+      - serviceAccount:${_GATEWAY_SERVICE_ACCOUNT}
+      - --role
+      - roles/run.invoker
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_IMAGE_NAME}:$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _REGION: us-central1
+  _AR_REPO: app-images
+  _IMAGE_NAME: demo-auth-resource
+  _SERVICE_NAME: demo-auth-resource
+  _SERVICE_ACCOUNT:
+  _VPC_NETWORK: demo-vpc
+  _VPC_SUBNET: cloud-run-egress-subnet
+  _VPC_EGRESS: all-traffic
+  _ISSUER_URI: http://localhost:8081
+  _CONFIG_SERVER: http://localhost:8888

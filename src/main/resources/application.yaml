@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: demo-resource-service
+  config:
+    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}"
+  cloud:
+    config:
+      request-connect-timeout: 5000 #use a long timeout for the config server, as it scales to zero
+      request-read-timeout: 10000
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI:http://localhost:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+app:
+  user-token-header: X-User-Access-Token
+
+logging:
+  level:
+    org.springframework.cloud: TRACE
+  structured:
+    format:
+      console: logstash
+
+---
+
+spring:
+    config:
+        activate:
+         on-profile: local
+server:
+    port: 8082

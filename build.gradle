@@ -1,0 +1,66 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.7'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.openapi.generator' version '7.14.0'  // add this
+}
+
+
+group = 'com.bkelly.demo'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencyManagement {
+	imports {
+		mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.1.0'	}
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
+	implementation 'org.springframework.cloud:spring-cloud-starter-config'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+	implementation "io.swagger.core.v3:swagger-annotations-jakarta:2.2.36"
+	implementation "io.swagger.core.v3:swagger-models-jakarta:2.2.36"
+	implementation "org.springframework.boot:spring-boot-starter-validation"
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+openApiGenerate {
+	generatorName = 'spring'
+	inputSpec     = "$projectDir/src/main/resources/openapi.yaml"
+	outputDir     = layout.buildDirectory.dir('generated').get().asFile.path
+	apiPackage    = 'com.bkelly.demo.resource.api'
+	modelPackage  = 'com.bkelly.demo.resource.model'
+	configOptions = [
+			interfaceOnly          : 'true',
+			useSpringBoot3         : 'true',
+			useTags                : 'true',
+			additionalModelTypeAnnotations: '@lombok.Data'
+	]
+}
+
+// Wire generated sources into the main source set
+sourceSets.main.java.srcDir "$buildDir/generated/src/main/java"
+
+compileJava.dependsOn tasks.openApiGenerate
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

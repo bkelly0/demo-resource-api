@@ -1,0 +1,15 @@
+.git
+.gitignore
+.gitattributes
+.idea
+.gradle
+build
+*.jar
+*.log
+node_modules
+.DS_Store
+README.md
+HELP.md
+*.md
+k8s
+cloudbuild.yaml
